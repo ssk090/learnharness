@@ -130,6 +130,21 @@ export interface AgentBuildOptions {
 	 *  <chatId>.jsonl via providerEventObserver — the GLM-truncation /
 	 *  DeepSeek-id incident layer. Absent or env-off → no observer. */
 	chatId?: string;
+	/** What the learner told us about themselves (settings general
+	 *  learnerProfile). Appended to the composed system prompt for every
+	 *  conversation agent (prober, teacher, practice). Absent/empty = no
+	 *  profile section. */
+	learnerProfile?: string;
+}
+
+/** The profile block appended after the composed prompt. Static wrapper so
+ *  the model knows this is user-supplied context, not instructions. */
+function learnerProfileSegment(profile: string): string {
+	return [
+		"## About the learner",
+		"What the learner has said about themselves. Use it to choose goals, examples, framing, and depth. Do not recite it back or treat it as complete.",
+		profile.trim(),
+	].join("\n\n");
 }
 
 /**
@@ -183,9 +198,12 @@ function baseAgentOptions(kind: AgentKind, opts: AgentBuildOptions, tools: Agent
 	// ("practice" is not a ModelRole) honest about that.
 	const engine = opts.engine ?? piEngineFor(kind as "prober" | "teacher");
 	const stopper = makeQuestionStopper(kind);
-	const systemPrompt = opts.promptSwitches
+	const systemPrompt = (opts.promptSwitches
 		? composeInstructions(kind, opts.promptSwitches)
-		: composedInstructions[kind]!;
+		: composedInstructions[kind]!) +
+		(opts.learnerProfile?.trim()
+			? "\n\n---\n\n" + learnerProfileSegment(opts.learnerProfile)
+			: "");
 	// Debug recorder (owner, 2026-10-04): raw provider events when
 	// LH_PROVIDER_EVENTS=1 and the caller handed a chatId; undefined is
 	// the normal no-observer path (tests, env-off).

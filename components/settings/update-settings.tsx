@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { BrailleSpinner } from "@/components/braille-spinner";
+import { LEARNER_PROFILE_MAX_CHARS } from "@/src/core";
 import { SettingsRow, Toggle } from "./controls.tsx";
 
 /** Observational snapshot from electron/main.cjs; never updater permission. */
@@ -53,6 +54,58 @@ export function updateStatusText(state: UpdateState | null): string | null {
 		case "error": return UPDATE_ERROR;
 		default: return null;
 	}
+}
+
+/** The learner's self-description: one free-text field injected into every
+ *  conversation agent's system prompt. Commit is explicit — a paste or edit
+ *  only lands when Save is pressed, so half-written resumes never steer a
+ *  turn. */
+export function LearnerProfileSettings({
+	profile,
+	onSave,
+}: {
+	profile: string;
+	onSave: (next: string) => void;
+}) {
+	const [draft, setDraft] = useState(profile);
+	const dirty = draft !== profile;
+	return (
+		<div className="flex flex-col gap-2" data-testid="learner-profile">
+			<span>
+				<span className="block font-prose text-(length:--lh-prose-size)">About you</span>
+				<span className="block text-xs text-muted-foreground/70">
+					Paste your resume, LinkedIn profile, or a short bio. The agent uses it to
+					shape goals, examples, and suggestions around your background instead of
+					guessing.
+				</span>
+			</span>
+			<textarea
+				value={draft}
+				maxLength={LEARNER_PROFILE_MAX_CHARS}
+				aria-label="About you"
+				placeholder="Experience, current role, what you already know, what you want to learn, constraints…"
+				data-testid="learner-profile-input"
+				rows={8}
+				onChange={(e) => setDraft(e.target.value)}
+				className="w-full resize-y rounded-sm border border-border bg-background px-2 py-1.5 font-prose text-(length:--lh-prose-size) text-foreground outline-none focus:border-muted-foreground/50"
+			/>
+			<div className="flex items-center justify-between gap-4">
+				<span className="text-xs text-muted-foreground/70">
+					{draft.length.toLocaleString()} / {LEARNER_PROFILE_MAX_CHARS.toLocaleString()}
+				</span>
+				<Button
+					type="button"
+					size="xs"
+					className="cursor-pointer"
+					data-testid="learner-profile-save"
+					disabled={!dirty}
+					onClick={() => onSave(draft)}
+				>
+					Save profile
+				</Button>
+			</div>
+		</div>
+	);
 }
 
 /** Version information is useful everywhere; update controls only belong

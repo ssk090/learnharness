@@ -328,7 +328,14 @@ export const ROLE_SLOT: Readonly<Record<ModelRole, ModelSlotName>> = {
 export interface GeneralSettings {
 	/** Automatic startup/24h update checks (default ON). Manual checks bypass this. */
 	autoUpdate?: boolean;
+	/** Free text the learner supplied about themselves (resume, LinkedIn
+	 *  profile, bio). Injected into every conversation agent's system prompt
+	 *  so goals and examples fit the person; absent/empty = no profile. */
+	learnerProfile?: string;
 }
+
+/** Upper bound for learnerProfile — a prompt segment, not a document store. */
+export const LEARNER_PROFILE_MAX_CHARS = 20_000;
 
 /** One app-wide dictation preference, shared by every composer. */
 export interface DictationSettings {
@@ -502,7 +509,7 @@ export interface FactorySettings {
 
 export const FACTORY_SETTINGS: FactorySettings = {
 	version: CURRENT_SETTINGS_VERSION,
-	general: { autoUpdate: true },
+	general: { autoUpdate: true, learnerProfile: "" },
 	dictation: { language: "en" },
 	appearance: {
 		mode: "dark",
@@ -548,6 +555,10 @@ function sanitizeGeneral(raw: Record<string, unknown>): GeneralSettings {
 	const out: GeneralSettings = {};
 	const autoUpdate = boolOrDrop(raw.autoUpdate);
 	if (autoUpdate !== undefined) out.autoUpdate = autoUpdate;
+	if (typeof raw.learnerProfile === "string") {
+		const profile = raw.learnerProfile.trim();
+		if (profile) out.learnerProfile = profile.slice(0, LEARNER_PROFILE_MAX_CHARS);
+	}
 	return out;
 }
 
